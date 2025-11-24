@@ -30,9 +30,18 @@
   "python.analysis.diagnosticSeverityOverrides": {
     "reportMissingImports": "none"
   },
-  "python.testing.pytestArgs": ["tests"],
+  "python.defaultInterpreterPath": "/Users/patrickrills/Code/inspect_ai/.venv/bin/python",
+  "inspect.pythonPath": "/Users/patrickrills/Code/inspect_ai/.venv/bin/python",
+  "python.testing.pytestArgs": [
+    "tests"
+  ],
   "python.testing.unittestEnabled": false,
   "python.testing.pytestEnabled": true,
   "quarto.render.renderOnSave": true,
-  "cSpell.words": ["backpressure", "scandef", "scanjob", "scanspec"]
+  "cSpell.words": [
+    "backpressure",
+    "scandef",
+    "scanjob",
+    "scanspec"
+  ]
 }
