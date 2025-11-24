@@ -15,6 +15,14 @@ export default defineConfig(({ mode }) => {
         fastRefresh: !isLibrary,
       }),
     ],
+    server: {
+      proxy: {
+        "/api": {
+          target: "http://localhost:7575",
+          changeOrigin: true,
+        },
+      },
+    },
     resolve: {
       dedupe: ["react", "react-dom"],
     },
