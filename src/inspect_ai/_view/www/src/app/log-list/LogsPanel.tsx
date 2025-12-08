@@ -14,6 +14,8 @@ import {
 import { useStore } from "../../state/store";
 import { dirname, isInDirectory } from "../../utils/path";
 import { directoryRelativeUrl, join } from "../../utils/uri";
+import { FlowButton } from "../flow/FlowButton";
+import { useFlowServerData } from "../flow/hooks";
 import { ApplicationNavbar } from "../navbar/ApplicationNavbar";
 import { ViewSegmentedControl } from "../navbar/ViewSegmentedControl";
 import { logsUrl, useLogRouteParams } from "../routing/url";
@@ -61,6 +63,9 @@ export const LogsPanel: FC<LogsPanelProps> = ({ maybeShowSingleLog }) => {
   const { logPath } = useLogRouteParams();
 
   const currentDir = join(logPath || "", logDir);
+
+  useFlowServerData(logPath || "");
+  const flowData = useStore((state) => state.logs.flow);
 
   // Polling for client events
   const { startPolling, stopPolling } = useClientEvents();
@@ -180,7 +185,7 @@ export const LogsPanel: FC<LogsPanelProps> = ({ maybeShowSingleLog }) => {
       > = collapseLogItems(evalSet, logItems);
 
       return appendPendingItems(evalSet, existingLogTaskIds, collapsedLogItems);
-    }, [currentDir, logFiles, logPreviews, evalSet]);
+    }, [evalSet, logFiles, currentDir, logDir, logPreviews]);
 
   const progress = useMemo(() => {
     let pending = 0;
@@ -223,7 +228,7 @@ export const LogsPanel: FC<LogsPanelProps> = ({ maybeShowSingleLog }) => {
         navigate(onlyItem.url);
       }
     }
-  }, [logItems, maybeShowSingleLog]);
+  }, [logItems, maybeShowSingleLog, navigate]);
 
   function handleKeyDown(e: KeyboardEvent<HTMLDivElement>) {
     if (e.key === "f" && (e.metaKey || e.ctrlKey)) {
@@ -252,6 +257,7 @@ export const LogsPanel: FC<LogsPanelProps> = ({ maybeShowSingleLog }) => {
       >
         <LogsFilterInput ref={filterRef} />
         <ViewSegmentedControl selectedSegment="logs" />
+        {flowData && <FlowButton />}
       </ApplicationNavbar>
 
       <>
@@ -285,7 +291,16 @@ export const collapseLogItems = (
   evalSet: EvalSet | undefined,
   logItems: (FileLogItem | FolderLogItem | PendingTaskItem)[],
 ): (FileLogItem | FolderLogItem | PendingTaskItem)[] => {
+  // If this isn't an eval set, don't filter it
   if (!evalSet) {
+    return logItems;
+  }
+
+  // If nothing is running, don't filter at all
+  const running = logItems.some(
+    (l) => l.type === "file" && l.logPreview?.status === "started",
+  );
+  if (!running) {
     return logItems;
   }
 

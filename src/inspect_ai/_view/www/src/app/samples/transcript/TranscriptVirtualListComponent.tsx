@@ -1,10 +1,19 @@
 import clsx from "clsx";
-import { FC, RefObject, useCallback, useMemo } from "react";
+import {
+  CSSProperties,
+  FC,
+  RefObject,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+} from "react";
 import { RenderedEventNode } from "./TranscriptVirtualList";
 import { EventNode } from "./types";
 
 import { VirtuosoHandle } from "react-virtuoso";
 import { LiveVirtualList } from "../../../components/LiveVirtualList";
+import { useStore } from "../../../state/store";
 import styles from "./TranscriptVirtualListComponent.module.css";
 
 interface TranscriptVirtualListComponentProps {
@@ -33,6 +42,12 @@ export const TranscriptVirtualListComponent: FC<
   offsetTop,
   className,
 }) => {
+  const useVirtualization = running || eventNodes.length > 100;
+  const setNativeFind = useStore((state) => state.appActions.setNativeFind);
+  useEffect(() => {
+    setNativeFind(!useVirtualization);
+  }, [setNativeFind, useVirtualization]);
+
   const initialEventIndex = useMemo(() => {
     if (initialEventId === null || initialEventId === undefined) {
       return undefined;
@@ -67,8 +82,18 @@ export const TranscriptVirtualListComponent: FC<
     [],
   );
 
+  const nonVirtualGridRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!useVirtualization && initialEventId) {
+      const row = nonVirtualGridRef.current?.querySelector(
+        `[id="${initialEventId}"]`,
+      );
+      row?.scrollIntoView({ block: "start" });
+    }
+  }, [initialEventId, useVirtualization]);
+
   const renderRow = useCallback(
-    (index: number, item: EventNode) => {
+    (index: number, item: EventNode, style?: CSSProperties) => {
       const paddingClass = index === 0 ? styles.first : undefined;
 
       const previousIndex = index - 1;
@@ -102,6 +127,7 @@ export const TranscriptVirtualListComponent: FC<
           key={item.id}
           className={clsx(styles.node, paddingClass, attachedClass)}
           style={{
+            ...style,
             paddingLeft: `${item.depth <= 1 ? item.depth * 0.7 : (0.7 + item.depth - 1) * 1}em`,
             paddingRight: `${item.depth === 0 ? undefined : ".7em"} `,
           }}
@@ -123,17 +149,30 @@ export const TranscriptVirtualListComponent: FC<
     ],
   );
 
-  return (
-    <LiveVirtualList<EventNode>
-      listHandle={listHandle}
-      className={className}
-      id={id}
-      scrollRef={scrollRef}
-      data={eventNodes}
-      initialTopMostItemIndex={initialEventIndex}
-      offsetTop={offsetTop}
-      renderRow={renderRow}
-      live={running}
-    />
-  );
+  if (useVirtualization) {
+    return (
+      <LiveVirtualList<EventNode>
+        listHandle={listHandle}
+        className={className}
+        id={id}
+        scrollRef={scrollRef}
+        data={eventNodes}
+        initialTopMostItemIndex={initialEventIndex}
+        offsetTop={offsetTop}
+        renderRow={renderRow}
+        live={running}
+      />
+    );
+  } else {
+    return (
+      <div ref={nonVirtualGridRef}>
+        {eventNodes.map((node, index) => {
+          const row = renderRow(index, node, {
+            scrollMarginTop: offsetTop,
+          });
+          return row;
+        })}
+      </div>
+    );
+  }
 };

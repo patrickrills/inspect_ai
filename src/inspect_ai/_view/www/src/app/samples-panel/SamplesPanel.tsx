@@ -8,6 +8,8 @@ import { useLogs } from "../../state/hooks";
 import { useStore } from "../../state/store";
 import { join } from "../../utils/uri";
 import { ApplicationIcons } from "../appearance/icons";
+import { FlowButton } from "../flow/FlowButton";
+import { useFlowServerData } from "../flow/hooks";
 import { LogListFooter } from "../log-list/LogListFooter";
 import { ApplicationNavbar } from "../navbar/ApplicationNavbar";
 import { NavbarButton } from "../navbar/NavbarButton";
@@ -36,6 +38,9 @@ export const SamplesPanel: FC = () => {
     }
   };
 
+  useFlowServerData(samplesPath || "");
+  const flowData = useStore((state) => state.logs.flow);
+
   const currentDir = join(samplesPath || "", logDir);
 
   const evalSet = useStore((state) => state.logs.evalSet);
@@ -50,7 +55,7 @@ export const SamplesPanel: FC = () => {
       }
     }
     return files;
-  }, [logDir, logFiles]);
+  }, [currentDir, logFiles]);
 
   const totalTaskCount = useMemo(() => {
     const currentDirTaskIds = new Set(currentDirLogFiles.map((f) => f.task_id));
@@ -84,12 +89,6 @@ export const SamplesPanel: FC = () => {
   const filterModel = gridRef.current?.api?.getFilterModel();
   const hasFilter = filterModel && Object.keys(filterModel).length > 0;
 
-  console.log({
-    totalTaskCount,
-    completedTaskCount,
-    showBar: totalTaskCount !== completedTaskCount,
-  });
-
   return (
     <div className={clsx(styles.panel)}>
       <ApplicationNavbar currentPath={samplesPath} fnNavigationUrl={samplesUrl}>
@@ -103,6 +102,7 @@ export const SamplesPanel: FC = () => {
         )}
 
         <ViewSegmentedControl selectedSegment="samples" />
+        {flowData && <FlowButton />}
       </ApplicationNavbar>
 
       <ActivityBar animating={!!loading} />
@@ -113,8 +113,13 @@ export const SamplesPanel: FC = () => {
       <LogListFooter
         id={"samples-list-footer"}
         itemCount={filteredSamplesCount ?? 0}
+        itemCountLabel={filteredSamplesCount === 1 ? "sample" : "samples"}
         paginated={false}
-        progressText={syncing ? "Syncing..." : undefined}
+        progressText={
+          syncing
+            ? `Syncing${filteredSamplesCount ? ` (${filteredSamplesCount.toLocaleString()} samples)` : ""}`
+            : undefined
+        }
         progressBar={
           totalTaskCount !== completedTaskCount ? (
             <ProgressBar

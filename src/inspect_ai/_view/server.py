@@ -15,9 +15,13 @@ from pydantic_core import to_jsonable_python
 
 from inspect_ai._display import display
 from inspect_ai._eval.evalset import EvalSet, read_eval_set_info
+from inspect_ai._util.azure import is_azure_auth_error
 from inspect_ai._util.constants import DEFAULT_SERVER_HOST, DEFAULT_VIEW_PORT
-from inspect_ai._util.file import (
-    filesystem,
+from inspect_ai._util.file import filesystem
+from inspect_ai._view.azure import (
+    azure_debug_exists,
+    azure_runtime_hint,
+    is_azure_path,
 )
 from inspect_ai.log._file import (
     read_eval_log_headers_async,
@@ -54,9 +58,16 @@ def view_server(
 
     # get filesystem and resolve log_dir to full path
     fs = filesystem(log_dir)
-    if not fs.exists(log_dir):
-        fs.mkdir(log_dir, True)
-    log_dir = fs.info(log_dir).name
+    if is_azure_path(log_dir):
+        try:
+            azure_debug_exists(fs, log_dir, display().print)
+            # Don't call fs.info(); keep original URI (fsspec paths acceptable downstream)
+        except Exception as ex:  # provide actionable guidance for Azure failures
+            raise RuntimeError(azure_runtime_hint(ex)) from ex
+    else:
+        if not fs.exists(log_dir):
+            fs.mkdir(log_dir, True)
+        log_dir = fs.info(log_dir).name
 
     # validate log file requests (must be in the log_dir
     # unless authorization has been provided)
@@ -201,6 +212,43 @@ def view_server(
         eval_set = read_eval_set_info(request_dir, fs_options=fs_options)
         return web.json_response(to_jsonable_python(eval_set, exclude_none=True))
 
+    @routes.get("/api/flow")
+    async def flow(request: web.Request) -> web.Response:
+        # log dir can optionally be overridden by the request
+        if authorization:
+            request_log_dir = request.query.getone("log_dir", None)
+            if request_log_dir:
+                request_log_dir = normalize_uri(request_log_dir)
+            else:
+                request_log_dir = log_dir
+        else:
+            request_log_dir = log_dir
+
+        request_dir = request.query.getone("dir", None)
+        if request_dir:
+            if request_log_dir:
+                request_dir = request_log_dir + "/" + request_dir.lstrip("/")
+            else:
+                request_dir = request_dir.lstrip("/")
+            validate_log_file_request(request_dir)
+        else:
+            request_dir = request_log_dir
+
+        fs = filesystem(request_dir)
+        flow_file = f"{request_dir}{fs.sep}flow.yaml"
+        try:
+            bytes = fs.read_bytes(flow_file)
+        except FileNotFoundError:
+            return web.Response(status=404, reason="Flow file not found")
+        except Exception as ex:
+            if is_azure_path(request_dir) and is_azure_auth_error(ex):
+                return web.Response(status=404, reason="Flow file not found")
+            raise
+
+        return web.Response(
+            text=bytes.decode("utf-8"), content_type="application/yaml", status=200
+        )
+
     @routes.get("/api/log-headers")
     async def api_log_headers(request: web.Request) -> web.Response:
         files = request.query.getall("file", [])
@@ -317,6 +365,7 @@ def view_server(
         print=display().print,
         access_log_format='%a %t "%r" %s %b (%Tf)',
         shutdown_timeout=1,
+        keepalive_timeout=15,
     )
 
 

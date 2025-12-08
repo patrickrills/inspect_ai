@@ -4,6 +4,7 @@ from typing import Awaitable, Callable
 import anyio
 from pydantic import JsonValue
 
+from inspect_ai.tool._tools._code_execution import CodeExecutionProviders
 from inspect_ai.tool._tools._web_search._web_search import WebSearchProviders
 from inspect_ai.util._sandbox import SandboxEnvironment, sandbox_service
 
@@ -20,6 +21,7 @@ MODEL_SERVICE = "bridge_model_service"
 async def run_model_service(
     sandbox: SandboxEnvironment,
     web_search: WebSearchProviders,
+    code_execution: CodeExecutionProviders,
     bridge: SandboxAgentBridge,
     instance: str,
     started: anyio.Event,
@@ -28,8 +30,12 @@ async def run_model_service(
         name=MODEL_SERVICE,
         methods={
             "generate_completions": generate_completions(bridge),
-            "generate_responses": generate_responses(web_search, bridge),
-            "generate_anthropic": generate_anthropic(web_search, bridge),
+            "generate_responses": generate_responses(
+                web_search, code_execution, bridge
+            ),
+            "generate_anthropic": generate_anthropic(
+                web_search, code_execution, bridge
+            ),
         },
         until=lambda: False,
         sandbox=sandbox,
@@ -47,32 +53,38 @@ def generate_completions(
         if bridge.model is not None:
             json_data["model"] = bridge.model
         completion = await inspect_completions_api_request(json_data, bridge)
-        return completion.model_dump(mode="json")
+        return completion.model_dump(mode="json", warnings=False)
 
     return generate
 
 
 def generate_responses(
     web_search: WebSearchProviders,
+    code_execution: CodeExecutionProviders,
     bridge: SandboxAgentBridge,
 ) -> Callable[[dict[str, JsonValue]], Awaitable[dict[str, JsonValue]]]:
     async def generate(json_data: dict[str, JsonValue]) -> dict[str, JsonValue]:
         if bridge.model is not None:
             json_data["model"] = bridge.model
-        completion = await inspect_responses_api_request(json_data, web_search, bridge)
-        return completion.model_dump(mode="json")
+        completion = await inspect_responses_api_request(
+            json_data, web_search, code_execution, bridge
+        )
+        return completion.model_dump(mode="json", warnings=False)
 
     return generate
 
 
 def generate_anthropic(
     web_search: WebSearchProviders,
+    code_execution: CodeExecutionProviders,
     bridge: SandboxAgentBridge,
 ) -> Callable[[dict[str, JsonValue]], Awaitable[dict[str, JsonValue]]]:
     async def generate(json_data: dict[str, JsonValue]) -> dict[str, JsonValue]:
         if bridge.model is not None:
             json_data["model"] = bridge.model
-        completion = await inspect_anthropic_api_request(json_data, web_search, bridge)
-        return completion.model_dump(mode="json")
+        completion = await inspect_anthropic_api_request(
+            json_data, web_search, code_execution, bridge
+        )
+        return completion.model_dump(mode="json", warnings=False)
 
     return generate

@@ -53,6 +53,7 @@ export type ParallelToolCalls = boolean | null;
 export type InternalTools = boolean | null;
 export type MaxToolOutput = number | null;
 export type CachePrompt = "auto" | boolean | null;
+export type Effort = ("low" | "medium" | "high") | null;
 export type ReasoningEffort =
   | ("none" | "minimal" | "low" | "medium" | "high")
   | null;
@@ -190,8 +191,8 @@ export type Scores = EvalScore[];
 export type Metadata4 = {
   [k: string]: unknown;
 } | null;
-export type StartedAt = string;
-export type CompletedAt = string;
+export type StartedAt = string | "";
+export type CompletedAt = string | "";
 export type InputTokens = number;
 export type OutputTokens = number;
 export type TotalTokens = number;
@@ -270,7 +271,7 @@ export type Video = string;
 export type Format2 = "mp4" | "mpeg" | "mov";
 export type Type12 = "data";
 export type Type13 = "tool_use";
-export type ToolType = "web_search" | "mcp_call";
+export type ToolType = "web_search" | "mcp_call" | "code_execution";
 export type Id2 = string;
 export type Name8 = string;
 export type Context = string | null;
@@ -895,6 +896,7 @@ export interface GenerateConfig {
   internal_tools: InternalTools;
   max_tool_output: MaxToolOutput;
   cache_prompt: CachePrompt;
+  effort: Effort;
   reasoning_effort: ReasoningEffort;
   reasoning_tokens: ReasoningTokens;
   reasoning_summary: ReasoningSummary;
@@ -1091,6 +1093,7 @@ export interface GenerateConfig1 {
   internal_tools: InternalTools;
   max_tool_output: MaxToolOutput;
   cache_prompt: CachePrompt;
+  effort: Effort;
   reasoning_effort: ReasoningEffort;
   reasoning_tokens: ReasoningTokens;
   reasoning_summary: ReasoningSummary;

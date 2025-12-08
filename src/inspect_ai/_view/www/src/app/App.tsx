@@ -8,6 +8,7 @@ import "prismjs/components/prism-clike";
 import "prismjs/components/prism-javascript";
 import "prismjs/components/prism-json";
 import "prismjs/components/prism-python";
+import "prismjs/components/prism-yaml";
 import "prismjs/themes/prism.css";
 import "./App.css";
 
@@ -131,7 +132,7 @@ export const App: FC<AppProps> = ({ api }) => {
         }
       }
     },
-    [logDir, setSelectedLogFile, syncLogs, api],
+    [setInitialState, setLogDir, logDir, setSelectedLogFile, api, syncLogs],
   );
 
   // listen for updateState messages from vscode
@@ -181,7 +182,15 @@ export const App: FC<AppProps> = ({ api }) => {
     };
 
     loadLogsAndState();
-  }, [setLogDir, setLogFiles, setSelectedLogFile, syncLogs, onMessage]);
+  }, [
+    setLogDir,
+    setLogFiles,
+    setSelectedLogFile,
+    syncLogs,
+    onMessage,
+    rehydrated,
+    setSingleFileMode,
+  ]);
 
   return <RouterProvider router={AppRouter} />;
 };
