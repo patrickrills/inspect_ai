@@ -1,5 +1,6 @@
 from inspect_ai import Task, task
 from inspect_ai.dataset import Sample
+from inspect_ai.dataset._sources.csv import csv_dataset
 from inspect_ai.solver import generate, prompt_template
 from inspect_ai.scorer import model_graded_qa
 
@@ -19,7 +20,7 @@ You are assessing a submitted answer on a given task based on a criterion. Here 
 ***
 [Submission]: {answer}
 ***
-[Criterion]: The answer should be a positive review praising the movie. It should convince somone to watch the movie. It should also contains a reference to the muppets.
+[Criterion]: The answer should be a positive review praising the movie. It should convince somone to watch the movie.
 ***
 [END DATA]
 
@@ -32,14 +33,25 @@ Does the submission meet the criterion?
 @task
 def movie_reviews():
     return Task(
-        dataset=[
-            Sample(
-                input="'The Matrix' from 1999 directed by the Wachowskis. \n Compare Neo from the Matrix to Fozzie Bear."
-            ),
-            Sample(input="'The Room' from 2003 directed by Tommy Wiseau"),
-        ],
+        dataset=csv_dataset(
+            "data/movie_reviews.csv",
+            record_to_sample,
+        ),
         solver=[prompt_template(MOVIE_REVIEW_PROMPT_TEMPLATE), generate()],
         scorer=model_graded_qa(
             template=MOVIE_REVIEW_MODEL_GRADED_QA_TEMPLATE, model="openai/gpt-4"
         ),
+    )
+
+
+def record_to_sample(record):
+    return Sample(
+        input="'"
+        + record["title"]
+        + "' from "
+        + record["year_released"]
+        + " directed by "
+        + record["director"],
+        id=record["movie_id"],
+        metadata={"genre": record["genre"], "category": record["category"]},
     )
