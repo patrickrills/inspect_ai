@@ -249,6 +249,13 @@ def mockllm() -> type[ModelAPI]:
     return MockLLM
 
 
+@modelapi(name="mockrest")
+def mockrest() -> type[ModelAPI]:
+    from .mockrest import MockRestAPI
+
+    return MockRestAPI
+
+
 @modelapi(name="sglang")
 def sglang() -> type[ModelAPI]:
     # Only validate OpenAI compatibility (needed for the API interface)
