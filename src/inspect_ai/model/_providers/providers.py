@@ -10,6 +10,13 @@ from .._registry import modelapi
 # strictly require this treatment but we do it anyway for uniformity,
 
 
+@modelapi(name="rest_mockllm")
+def rest_mockllm() -> type[ModelAPI]:
+    from .rest_mockllm import RestMockLLM
+
+    return RestMockLLM
+
+
 @modelapi(name="groq")
 def groq() -> type[ModelAPI]:
     FEATURE = "Groq API"

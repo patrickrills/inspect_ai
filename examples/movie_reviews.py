@@ -38,9 +38,12 @@ def movie_reviews():
             record_to_sample,
         ),
         solver=[prompt_template(MOVIE_REVIEW_PROMPT_TEMPLATE), generate()],
+        # solver=generate(),
         scorer=model_graded_qa(
             template=MOVIE_REVIEW_MODEL_GRADED_QA_TEMPLATE, model="openai/gpt-4"
         ),
+        fail_on_error=False,
+        continue_on_fail=True,
     )
 
 
